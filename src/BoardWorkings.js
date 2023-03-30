@@ -2,8 +2,9 @@ import boardData from './board.json'
 
 class BoardWorkings {
     constructor () {
-        let name, color, fontColor, fontSize, hide, start
-        const tileColor = boardData.tileColor, tileFontColor = boardData.tileFontColor, tileFontSize = boardData.tileFontSize
+        let id = 0, name, color, fontColor, fontSize, hide, start
+        const tileColor = boardData.tileColor, tileFontColor = boardData.tileFontColor,
+            tileInvalidFontColor = boardData.tileInvalidFontColor, tileFontSize = boardData.tileFontSize
         this.letters = []
         this.letterBag = []
         for (const letter of boardData.letters) {
@@ -24,9 +25,9 @@ class BoardWorkings {
                     start = type.start
                 }
                 // create a new tile slot
-                this.board[this.board.length - 1].push({ char: '', type: name, color: color, tileColor: tileColor, fontColor: fontColor,
-                    tileFontColor: tileFontColor, fontSize: fontSize, tileFontSize: tileFontSize, hide: hide, start: start, locked: false,
-                    valid: true, points: 0, row: this.board.length - 1, column: this.board[this.board.length - 1].length - 1})})
+                this.board[this.board.length - 1].push({ id: id++, char: '', type: name, color: color, tileColor: tileColor, fontColor: fontColor,
+                    tileFontColor: tileFontColor, tileInvalidFontColor: tileInvalidFontColor, fontSize: fontSize, tileFontSize: tileFontSize,
+                    hide: hide, start: start, locked: false, valid: true, points: 0 })})
         })
     }
 
@@ -75,18 +76,18 @@ class BoardWorkings {
     }
 
     getPotentialWords () {
-        let board = [], potentialWords, potentialHWords = [''], potentialVWords = [''], potentialScores = [],
-            columnStart = 0, hPoints = 0, vPoints = 0, hWordModifier = 1, vWordModifier = 1, hWordLocked = false, vWordLocked = false,
+        let id = this.board[this.board.length - 1][this.board[this.board.length - 1].length - 1].id, board = [],
+            potentialWords, potentialHWords = [''], potentialVWords = [''], potentialScores = [], columnStart = 0, hPoints = 0, vPoints = 0,
+            hWordModifier = 1, vWordModifier = 1, hWordLocked = false, vWordLocked = false,
             hLock = true, vLock = true
         // append an additional invisible dummy tile to each row to prevent horizontal word wrapping
-        this.board.forEach(row => board.push([...row.slice(), { char: '', type: '', color: 'none', tileColor: 'none', fontColor: 'none',
-            tileFontColor: 'none', fontSize: 1, tileFontSize: 1, hide: 0, start: 0, locked: false, valid: false, points: 0,
-            row: this.board.length - 1, column: this.board[this.board.length - 1].length - 1 }]))
+        this.board.forEach(row => board.push([...row.slice(), { id: id++, char: '', type: '', color: 'none', tileColor: 'none', fontColor: 'none',
+            tileFontColor: 'none', tileInvalidFontColor: 'none', fontSize: 1, tileFontSize: 1, hide: 0, start: 0, locked: false, valid: false, points: 0 }]))
         // add an invisible row of dummy tiles to prevent vertical word wrapping
         board.push([])
-        for (let i = 0; i < board[0].length; i++) board[board.length - 1].push({ char: '', type: '', color: 'none', tileColor: 'none', fontColor: 'none',
-            tileFontColor: 'none', fontSize: 1, tileFontSize: 1, hide: 0, start: 0, locked: false, valid: false, points: 0,
-            row: this.board.length - 1, column: i })
+        for (let i = 0; i < board[0].length; i++) board[board.length - 1].push({ id: id++, char: '', type: '', color: 'none', tileColor: 'none',
+            fontColor: 'none', tileFontColor: 'none', tileInvalidFontColor: 'none', fontSize: 1, tileFontSize: 1, hide: 0, start: 0, locked: false,
+            valid: false, points: 0 })
         for (const row of board) {
             for (const column of row) {
                 if (!column.char && (this.checkLeftTile(row, column) ? this.checkLeftTile(row, column).char : false)) {

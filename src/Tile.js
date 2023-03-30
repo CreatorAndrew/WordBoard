@@ -13,7 +13,8 @@ class Tile extends Component {
     render () {
         return <div style={{ width: 'auto', height: '100%', textAlign: 'center', 
                 backgroundColor: this.props.tile.name ? this.props.tile.tileColor : this.props.tile.color,
-                color: this.props.tile.name ? this.props.tile.tileFontColor : this.props.tile.fontColor }}
+                color: this.props.tile.name ? (this.props.tile.valid ? this.props.tile.tileFontColor : this.props.tile.tileInvalidFontColor)
+                    : this.props.tile.fontColor }}
             onClick={() => this.setState({ changeToInput: true })}>
             {this.state.changeToInput
                 ? <input type='text'

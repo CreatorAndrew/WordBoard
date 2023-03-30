@@ -18,6 +18,7 @@
     ],
     "tileColor": "#fffab4",
     "tileFontColor": "#000000",
+    "tileInvalidFontColor": "#ff0000",
     "tileFontSize": "75%",
     "tileTypes": [
         {"id": "TW", "name": "TW", "modifier": "3", "affects": "word", "color": "#e06800", "fontColor": "#ffffff", "fontSize": "75%", "hide": 0, "start": 0},
@@ -28,6 +29,7 @@
         {"id": "ST", "name": "☆", "modifier": "2", "affects": "word", "color": "#d00000", "fontColor": "#ffffff", "fontSize": "150%", "hide": 0, "start": 1}
     ],
     "letters": [
+        {"letter": " ", "value": 0, "count": 2, "wildCard": 1},
         {"letter": "E", "value": 1, "count": 12, "wildCard": 0},
         {"letter": "A", "value": 1, "count": 9, "wildCard": 0},
         {"letter": "I", "value": 1, "count": 9, "wildCard": 0},
@@ -53,7 +55,6 @@
         {"letter": "J", "value": 8, "count": 1, "wildCard": 0},
         {"letter": "X", "value": 8, "count": 1, "wildCard": 0},
         {"letter": "Q", "value": 10, "count": 1, "wildCard": 0},
-        {"letter": "Z", "value": 10, "count": 1, "wildCard": 0},
-        {"letter": " ", "value": 0, "count": 2, "wildCard": 1}
+        {"letter": "Z", "value": 10, "count": 1, "wildCard": 0}
     ]
 }

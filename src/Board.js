@@ -8,15 +8,14 @@ class Board extends Component {
     state = { board: new BoardWorkings(), savedWords: { words: [], scores: [] }, players: [], nextPlayer: 0, finished: false }
     nextPlayer = this.state.nextPlayer
     placedTiles = []
-    placedTileIndices = []
-    placedTileIndex = 0
+    invalidTiles = []
 
     findRowIndex (column) {
-        for (const row of this.state.board.board) if (row.indexOf(column) >= 0) return this.state.board.board.indexOf(row)
+        for (const row of this.state.board.board) if (row.indexOf(column) > -1) return this.state.board.board.indexOf(row)
     }
 
     findColumnIndex (column) {
-        for (const row of this.state.board.board) if (row.indexOf(column) >= 0) return row.indexOf(column)
+        for (const row of this.state.board.board) if (row.indexOf(column) > -1) return row.indexOf(column)
     }
 
     checkForLetter (char) {
@@ -32,17 +31,40 @@ class Board extends Component {
         }
     }
 
+    sortTiles (tiles, reverse = false) {
+        for (let i = 0, tempTile; i < tiles.length - 1; i++)
+            for (let j = 0; j < tiles.length - 1; j++)
+                if (reverse ? (tiles[j].id < tiles[j + 1].id) : (tiles[j].id > tiles[j + 1].id)) {
+                    tempTile = tiles.slice()[j]
+                    tiles[j] = tiles.slice()[j + 1]
+                    tiles[j + 1] = tempTile
+                }
+    }
+
+    checkTileValidity (tile) {
+        return tile.valid && tile.char
+    }
+
+    makeTileValid (tile, char) {
+        tile.valid = true
+        if (char) this.invalidTiles.splice(this.invalidTiles.indexOf(tile), 1)
+    }
+
+    makeTileInvalid (tile, checkForInvalidTiles) {
+        tile.valid = false
+        if (checkForInvalidTiles && this.invalidTiles.indexOf(tile) < 0) this.invalidTiles.push(tile)
+    }
+
     returnTileToPlayer (tile) {
         this.state.players[this.nextPlayer].hand.push(tile.char) // place the removed tile back in the player's hand
-        this.placedTileIndices.splice(this.placedTiles.indexOf(tile), 1)
         this.placedTiles.splice(this.placedTiles.indexOf(tile), 1)
-        this.placedTileIndex--
         tile.char = ''
         tile.name = ''
         tile.points = 0
     }
 
     endTurn (potentialWords) {
+        if (this.invalidTiles.length) return
         for (const potentialWord of potentialWords.words)
             if (dictionary.words.indexOf(potentialWord.toLowerCase()) < 0) return // check if the word is valid
         const players = this.state.players.slice()
@@ -54,8 +76,6 @@ class Board extends Component {
         if (this.placedTiles.length === 7) players[this.nextPlayer].score += 50 // award 50 additional points if the player has placed 7 tiles in one turn
         this.state.board.board.forEach(row => row.forEach(column => column.locked = !(!column.char)))
         this.placedTiles = []
-        this.placedTileIndices = []
-        this.placedTileIndex = 0
         if (this.nextPlayer < this.state.players.length - 1) this.nextPlayer++
         else this.nextPlayer = 0
         this.addTiles()
@@ -87,20 +107,28 @@ class Board extends Component {
         this.endTurn(potentialWords)
     }
 
-    handleCharChange (tile, char) {
-        let tileHorizontallyAdjacent, tileVerticallyAdjacent, lineHorizontal, lineVertical, rowIndex, columnIndex, hasPoints = false, wildCardLetter = 0
-        for (const letter of this.state.board.letters)
-            if (char && ((char === letter.letter && this.checkForLetter(char).inHand) || (letter.wildCard && this.checkForLetter(letter.letter).inHand))) {
+    handleCharChange (tile, char, checkForInvalidTiles = true, name = char) {
+        let tileHorizontallyAdjacent, tileVerticallyAdjacent, lineHorizontal, lineVertical, rowIndex, columnIndex, hasPoints = false,
+            wildCardLetter = 0, checkForValidTiles = true
+        if (checkForInvalidTiles) for (const letter of this.state.board.letters)
+            if (char && (char === letter.letter && this.checkForLetter(char).inHand && !letter.wildCard)) {
                 if (!tile.locked) tile.points = letter.value
                 hasPoints = true
-                if (letter.wildCard) wildCardLetter = letter.letter
                 break
             }
-        for (const row of this.state.board.board) {
-            tileHorizontallyAdjacent = this.state.board.checkHorizontalAdjacency(row, tile)
-            tileVerticallyAdjacent = this.state.board.checkVerticalAdjacency(row, tile, this.state.board.board)
-            if (tileHorizontallyAdjacent || tileVerticallyAdjacent) break
-        }
+        if (!hasPoints && checkForInvalidTiles) for (const letter of this.state.board.letters)
+            if (char && (!this.checkForLetter(char).inHand && letter.wildCard && this.checkForLetter(letter.letter).inHand)) {
+                if (!tile.locked) tile.points = letter.value
+                wildCardLetter = letter.letter
+                hasPoints = true
+                break
+            }
+        tileHorizontallyAdjacent = this.checkTileValidity(this.state.board.checkLeftTile(this.state.board.board[this.findRowIndex(tile)], tile))
+            || this.checkTileValidity(this.state.board.checkRightTile(this.state.board.board[this.findRowIndex(tile)], tile))
+        tileVerticallyAdjacent = this.checkTileValidity(this.state.board.checkTileAbove(this.state.board.board[this.findRowIndex(tile)], tile,
+                this.state.board.board)) 
+            || this.checkTileValidity(this.state.board.checkTileBelow(this.state.board.board[this.findRowIndex(tile)], tile,
+                this.state.board.board))
         // check if the line of letters is horizontal or vertical
         if (this.placedTiles.length > 1) {
             lineHorizontal = this.findRowIndex(this.placedTiles[0]) === this.findRowIndex(this.placedTiles[1])
@@ -108,18 +136,14 @@ class Board extends Component {
             lineVertical = this.findColumnIndex(this.placedTiles[0]) === this.findColumnIndex(this.placedTiles[1])
             if (lineVertical) columnIndex = this.findColumnIndex(this.placedTiles[1])
         }
-        if (((hasPoints // check if a tile was meant to be placed
-                // check if the tile is adjacent to another and exclusively forms a single horizontal line with the other tiles placed in the same turn
-                && ((((tileHorizontallyAdjacent && (((rowIndex === this.findRowIndex(tile)) && lineHorizontal) || this.placedTiles.length <= 1))
-                // check if the tile is adjacent to another and exclusively forms a single vertical line with the other tiles placed in the same turn
-                || (tileVerticallyAdjacent && (((columnIndex === this.findColumnIndex(tile)) && lineVertical) || this.placedTiles.length <= 1))))
-                || tile.start)) // if the tile is not adjacent to any other tiles, check if the tile is in the start slot
-                || !char) // if the above conditions fail, check if a tile was meant to be removed
-                && !tile.locked) { // make sure that the tile being placed or removed wasn't in a slot already occupied from a previous turn
-            if (!char) this.returnTileToPlayer(tile) // check if a tile was meant to be removed
+        if ((hasPoints || !char || !checkForInvalidTiles) && !tile.locked) {
+            if (!char) { // check if a tile was meant to be removed
+                if (!tile.valid) this.makeTileValid(tile, char)
+                this.returnTileToPlayer(tile)
+                for (const placedTile of this.placedTiles) this.makeTileInvalid(placedTile, checkForInvalidTiles)
+            }
             else if (!tile.char) { // check if a tile was meant to be placed
                 this.placedTiles.push(tile)
-                this.placedTileIndices.push(this.placedTileIndex++)
                 // remove the tile from the player's hand
                 this.state.players[this.nextPlayer].hand.splice(this.checkForLetter(wildCardLetter ? wildCardLetter : char).handIndex, 1)
             }
@@ -128,51 +152,67 @@ class Board extends Component {
                 // remove the new tile from the player's hand
                 this.state.players[this.nextPlayer].hand.splice(this.checkForLetter(wildCardLetter ? wildCardLetter : char).handIndex, 1)
             }
-            tile.char = wildCardLetter ? wildCardLetter : char
-            tile.name = char
+            if (name === char) {
+                tile.char = wildCardLetter ? wildCardLetter : char
+                tile.name = char
+            }
             // ensure that any tiles placed within a horizontal line in the same turn are not interrupted by a gap
-            if (char && this.findRowIndex(this.placedTiles[0]) === this.findRowIndex(this.placedTiles[1]))
-                for (const column of this.state.board.board[this.findRowIndex(this.placedTiles[1])])
-                    if (!column.char && ((this.findColumnIndex(column) > this.findColumnIndex(this.placedTiles[0])
-                            && this.findColumnIndex(column) < this.findColumnIndex(tile))
-                            || (this.findColumnIndex(column) < this.findColumnIndex(this.placedTiles[0])
-                            && this.findColumnIndex(column) > this.findColumnIndex(tile)))) {
-                        this.returnTileToPlayer(tile)
-                        break
+            if (char && this.findRowIndex(this.placedTiles[0]) === this.findRowIndex(this.placedTiles[1])) {
+                this.sortTiles(this.placedTiles)
+                for (let i = 0, gap; i < this.placedTiles.length - 1; i++)
+                    if (this.placedTiles[i].id !== this.placedTiles[i + 1].id - 1) {
+                        gap = this.placedTiles[i + 1].id - this.placedTiles[i].id
+                        for (let j = 1; j < gap; j++) {
+                            if (!this.state.board.board[this.findRowIndex(this.placedTiles[i])][this.findColumnIndex(this.placedTiles[i]) + j].char) {
+                                for (const placedTile of this.placedTiles) this.makeTileInvalid(placedTile, checkForInvalidTiles)
+                                checkForValidTiles = false
+                                break
+                            }
+                        }
+                        if (!checkForValidTiles) break
                     }
+            }
             // ensure that any tiles placed within a vertical line in the same turn are not interrupted by a gap
-            if (char && this.findColumnIndex(this.placedTiles[0]) === this.findColumnIndex(this.placedTiles[1]))
-                for (const row of this.state.board.board)
-                    if  (!row[this.findColumnIndex(this.placedTiles[1])].char
-                            && ((this.findRowIndex(row[this.findColumnIndex(this.placedTiles[1])]) > this.findRowIndex(this.placedTiles[0])
-                            && this.findRowIndex(row[this.findColumnIndex(this.placedTiles[1])]) < this.findRowIndex(tile))
-                            || (this.findRowIndex(row[this.findColumnIndex(this.placedTiles[1])]) < this.findRowIndex(this.placedTiles[0])
-                            && this.findRowIndex(row[this.findColumnIndex(this.placedTiles[1])]) > this.findRowIndex(tile)))) {
-                        this.returnTileToPlayer(tile)
-                        break
+            if (char && this.findColumnIndex(this.placedTiles[0]) === this.findColumnIndex(this.placedTiles[1])) {
+                this.sortTiles(this.placedTiles)
+                for (let i = 0, gap; i < this.placedTiles.length - 1; i++)
+                    if (this.placedTiles[i].id !== this.placedTiles[i + 1].id - this.state.board.board[0].length) {
+                        gap = (this.placedTiles[i + 1].id - this.placedTiles[i].id) / this.state.board.board[0].length
+                        for (let j = 1; j < gap; j++) {
+                            if (!this.state.board.board[this.findRowIndex(this.placedTiles[i]) + j][this.findColumnIndex(this.placedTiles[i])].char) {
+                                for (const placedTile of this.placedTiles) this.makeTileInvalid(placedTile, checkForInvalidTiles)
+                                checkForValidTiles = false
+                                break
+                            }
+                        }
+                        if (!checkForValidTiles) break
                     }
+            }
             // for when there are only two tiles, ensure that the second tile is in the same row or column as the first tile
             if (this.placedTiles.length === 2 ? this.findColumnIndex(this.placedTiles[0]) !== this.findColumnIndex(this.placedTiles[1])
                     && this.findRowIndex(this.placedTiles[0]) !== this.findRowIndex(this.placedTiles[1]) : false) {
-                this.returnTileToPlayer(tile)
+                this.makeTileInvalid(tile, checkForInvalidTiles)
+                checkForValidTiles = false
             }
+            // check if the tile is adjacent to another and exclusively forms a single horizontal line with the other tiles placed in the same turn
+            if (char && !((tileHorizontallyAdjacent && (((rowIndex === this.findRowIndex(tile)) && lineHorizontal) || this.placedTiles.length <= 1))
+                    // check if the tile is adjacent to another and exclusively forms a single vertical line with the other tiles placed in the same turn
+                    || (tileVerticallyAdjacent && (((columnIndex === this.findColumnIndex(tile)) && lineVertical) || this.placedTiles.length <= 1))
+                    || tile.start))
+                this.makeTileInvalid(tile, checkForInvalidTiles)
         }
-        // remove tiles that were placed after the placement of another tile that was later removed
-        for (let i = 0; i < this.placedTiles.length; i++)
-            if (i !== this.placedTileIndices[i]) {
-                this.state.players[this.nextPlayer].hand.push(this.placedTiles[i].char) // place the removed tile back in the player's hand
-                for (const row of this.state.board.board)
-                    if (row[row.indexOf(this.placedTiles[i])]) {
-                        row[row.indexOf(this.placedTiles[i])].char = ''
-                        row[row.indexOf(this.placedTiles[i])].name = ''
-                        row[row.indexOf(this.placedTiles[i])].points = 0
-                    }
-                this.placedTiles.splice(i, 1)
-                this.placedTileIndices.splice(i, 1)
-                this.placedTileIndex--
-                i--
-            }
         if (tile.points && !tile.char) tile.points = 0
+        if ((tileHorizontallyAdjacent || tileVerticallyAdjacent || tile.start) && checkForValidTiles) this.makeTileValid(tile, char)
+        else if (char && this.invalidTiles.indexOf(tile) < 0) this.makeTileInvalid(tile, checkForInvalidTiles)
+        if (checkForInvalidTiles) {
+            this.sortTiles(this.placedTiles)
+            for (const placedTile of this.placedTiles) this.handleCharChange(placedTile, placedTile.char, false, placedTile.name)
+            this.sortTiles(this.placedTiles, true)
+            for (const placedTile of this.placedTiles) this.handleCharChange(placedTile, placedTile.char, false, placedTile.name)
+        }
+        for (const invalidTile of this.invalidTiles) if (!invalidTile.char) this.makeTileValid(invalidTile, 'A')
+        for (const placedTile of this.placedTiles) if (!placedTile.valid && this.invalidTiles.indexOf(placedTile) < 0)
+            this.makeTileValid(placedTile, placedTile.char)
         this.setState({ board: this.state.board })
     }
 
@@ -213,6 +253,8 @@ class Board extends Component {
                 {potentialWord + ' (' + potentialWords.scores[potentialWordCount] + ')' +
                     (potentialWords.words.indexOf(potentialWord) < potentialWords.words.length - 1 ? ', ' : '')}
             </label>)}
+            <br/>
+            {this.invalidTiles.length ? <label>Invalid Tiles ({this.invalidTiles.length}): {this.invalidTiles.map(tile => tile.char)}</label> : ''}
         </div>
     }
 }
