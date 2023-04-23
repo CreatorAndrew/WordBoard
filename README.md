@@ -1,7 +1,7 @@
 # WordBoard
 
 This project attempts to recreate Scrabble in the web browser using React.
-Currently, it uses keyboard input on tiles and checks if a value entered in is in the current player's tile rack.
+Currently, it uses keyboard input on tiles and checks if a letter entered in is in the current player's tile rack.
 
 <img width="1728" alt="Screenshot 2023-04-23 at 4 44 30 PM" src="https://user-images.githubusercontent.com/28602923/233867888-0226b215-aee8-4d0b-8540-d1289da8ac69.png">
 
