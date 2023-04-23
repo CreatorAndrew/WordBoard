@@ -1,6 +1,10 @@
 # Getting Started with Create React App
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+This project attempts to recreate Scrabble in the web browser using React.
+Currently, it uses keyboard input on tiles and checks if a key entered is in the current player's tile rack.
+
+## Board configuration
+One can modify the board and its contents in the `board.json` files
 
 ## Available Scripts
 
