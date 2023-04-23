@@ -1,4 +1,4 @@
-# Getting Started with Create React App
+# WordBoard
 
 This project attempts to recreate Scrabble in the web browser using React.
 Currently, it uses keyboard input on tiles and checks if a value entered in is in the current player's tile rack.
