@@ -5,7 +5,7 @@ import Exchange from './Exchange.js'
 import dictionary from './dictionary.json'
 
 class Board extends Component {
-    state = { board: new BoardWorkings(), savedWords: { words: [], scores: [] }, players: [], nextPlayer: 0, finished: false }
+    state = { board: new BoardWorkings(), savedWords: { words: [], scores: [] }, players: [], nextPlayer: 0, started: false, finished: false }
     nextPlayer = this.state.nextPlayer
     placedTiles = []
     invalidTiles = []
@@ -80,7 +80,7 @@ class Board extends Component {
         else this.nextPlayer = 0
         this.addTiles()
         for (const player of this.state.players) player.isActive = this.state.players.indexOf(player) === this.nextPlayer
-        this.setState({ board: this.state.board, savedWords: this.state.savedWords, players: players, nextPlayer: this.nextPlayer }, () => {
+        this.setState({ board: this.state.board, savedWords: this.state.savedWords, players: players.slice(), nextPlayer: this.nextPlayer }, () => {
             if (!players[this.nextPlayer ? this.nextPlayer - 1 : players.length - 1].hand.length && !this.state.board.letterBag.length) {
                 // end game
                 let winnerBonus = 0
@@ -92,7 +92,7 @@ class Board extends Component {
                                 winnerBonus += letter.value // accumulate the aforementioned points as a bonus to be added to the winning player's total score
                             }
                 players[this.nextPlayer ? this.nextPlayer - 1 : players.length - 1].score += winnerBonus
-                this.setState({ players: players, finished: true })
+                this.setState({ players: players.slice(), finished: true })
             }
         })
     }
@@ -213,19 +213,19 @@ class Board extends Component {
         for (const invalidTile of this.invalidTiles) if (!invalidTile.char) this.makeTileValid(invalidTile, 'A')
         for (const placedTile of this.placedTiles) if (!placedTile.valid && this.invalidTiles.indexOf(placedTile) < 0)
             this.makeTileValid(placedTile, placedTile.char)
-        this.setState({ board: this.state.board })
+        this.setState({ board: this.state.board, started: !this.state.started && hasPoints ? true : this.state.started })
     }
 
     render () {
         let potentialWords = this.state.board.getPotentialWords(), potentialWordCount = 0, savedWordCount = 0, playerCount = 0
         return <div>
-            <button onClick={() => {
+            {this.state.started ? '' : <button onClick={() => {
                 this.setState({ players: [...this.state.players, { name: 'Player ' + (this.state.players.length + 1), hand: [], score: 0,
                     isActive: !this.state.players.length }] }, () => {
                         this.addTiles()
                         this.setState({ players: this.state.players.slice() })
-                    })}}>Add Player</button>
-            {!this.state.finished ? <button onClick={() => this.endTurn(potentialWords)}>Next Player</button> : <label>[ Game Finished ]</label>}
+                    })}}>Add Player</button>}
+            {this.state.finished ? <label>[ Game Finished ]</label> : <button onClick={() => this.endTurn(potentialWords)}>Next Player</button>}
             {!this.state.finished
                 && !this.placedTiles.length && this.state.board.letterBag.length ? <Exchange execute={text => this.exchange(potentialWords, text)}/> : ''}
             <table style={{ border: '1px solid black', borderCollapse: 'collapse' }}>
