@@ -26,8 +26,6 @@ jobs:
         git remote set-url origin https://$MY_NAME:${{ secrets.GH_SECRET }}@github.com/CreatorAndrew/WordBoard.git
     - name: install
       run: yarn install
-    - name: build
-      run: yarn build
     - name: predeploy
       run: yarn run predeploy
     - name: deploy
