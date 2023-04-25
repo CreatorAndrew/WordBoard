@@ -5,7 +5,7 @@ import Exchange from './Exchange.js'
 import dictionary from './dictionary.json'
 
 class Board extends Component {
-    state = { board: new BoardWorkings(), savedWords: { words: [], scores: [] }, players: [], nextPlayer: 0, started: false, finished: false }
+    state = { board: new BoardWorkings(), savedWords: [], players: [], nextPlayer: 0, started: false, finished: false }
     nextPlayer = this.state.nextPlayer
     placedTiles = []
     invalidTiles = []
@@ -65,14 +65,11 @@ class Board extends Component {
 
     endTurn (potentialWords) {
         if (this.invalidTiles.length) return
-        for (const potentialWord of potentialWords.words)
-            if (dictionary.words.indexOf(potentialWord.toLowerCase()) < 0) return // check if the word is valid
+        for (const potentialWord of potentialWords)
+            if (dictionary.words.indexOf(potentialWord.word.toLowerCase()) < 0) return // check if the word is valid
         const players = this.state.players.slice()
-        for (let i = 0; i < potentialWords.words.length; i++) {
-            this.state.savedWords.words.push('' + potentialWords.words[i])
-            this.state.savedWords.scores.push(0 + potentialWords.scores[i])
-            players[this.nextPlayer].score += potentialWords.scores[i]
-        }
+        for (const potentialWord of potentialWords)
+            players[this.nextPlayer].score += potentialWord.score
         if (this.placedTiles.length === 7) players[this.nextPlayer].score += 50 // award 50 additional points if the player has placed 7 tiles in one turn
         this.state.board.board.forEach(row => row.forEach(column => column.locked = !(!column.char)))
         this.placedTiles = []
@@ -80,7 +77,8 @@ class Board extends Component {
         else this.nextPlayer = 0
         this.addTiles()
         for (const player of this.state.players) player.isActive = this.state.players.indexOf(player) === this.nextPlayer
-        this.setState({ board: this.state.board, savedWords: this.state.savedWords, players: players.slice(), nextPlayer: this.nextPlayer }, () => {
+        this.setState({ board: this.state.board, savedWords: this.state.savedWords.concat(potentialWords), 
+                players: players.slice(), nextPlayer: this.nextPlayer }, () => {
             if (!players[this.nextPlayer ? this.nextPlayer - 1 : players.length - 1].hand.length && !this.state.board.letterBag.length) {
                 // end game
                 let winnerBonus = 0
@@ -217,7 +215,7 @@ class Board extends Component {
     }
 
     render () {
-        let potentialWords = this.state.board.getPotentialWords(), potentialWordCount = 0, savedWordCount = 0, playerCount = 0
+        const potentialWords = this.state.board.getPotentialWords()
         return <div>
             {this.state.started ? '' : <button onClick={() => {
                 this.setState({ players: [...this.state.players, { name: 'Player ' + (this.state.players.length + 1), hand: [], score: 0,
@@ -240,18 +238,18 @@ class Board extends Component {
                         </tr>)}
                 </tbody>
             </table>
-            <div>{this.state.players.map(player => <label key={playerCount++}>
+            <div>{this.state.players.map(player => <label key={this.state.players.indexOf(player)}>
                 {(player.isActive ? '* ' : '') + player.name + ' (Score: ' + player.score + (player.isActive ? ', Hand: ' + player.hand : '') + ')'}
                 {this.state.players.indexOf(player) < this.state.players.length - 1 ? <br/> : ''}
             </label>)}</div>
             <br/>
-            {this.state.savedWords.words.map(savedWord => <label key={savedWordCount++}>
-                {savedWord + ' (' + this.state.savedWords.scores[savedWordCount] + ')' +
-                    (this.state.savedWords.words.indexOf(savedWord) < this.state.savedWords.words.length - 1 || potentialWords.words.length ? ', ' : '')}
+            {this.state.savedWords.map(savedWord => <label key={this.state.savedWords.indexOf(savedWord)}>
+                {savedWord.word + ' (' + savedWord.score + ')' +
+                    (this.state.savedWords.indexOf(savedWord) < this.state.savedWords.length - 1 || potentialWords.length ? ', ' : '')}
             </label>)}
-            {potentialWords.words.map(potentialWord => <label key={potentialWordCount++}>
-                {potentialWord + ' (' + potentialWords.scores[potentialWordCount] + ')' +
-                    (potentialWords.words.indexOf(potentialWord) < potentialWords.words.length - 1 ? ', ' : '')}
+            {potentialWords.map(potentialWord => <label key={potentialWords.indexOf(potentialWord)}>
+                {potentialWord.word + ' (' + potentialWord.score + ')' +
+                    (potentialWords.indexOf(potentialWord) < potentialWords.length - 1 ? ', ' : '')}
             </label>)}
             <br/>
             {this.invalidTiles.length ? <label>Invalid Tiles ({this.invalidTiles.length}): {this.invalidTiles.map(tile => tile.char)}</label> : ''}

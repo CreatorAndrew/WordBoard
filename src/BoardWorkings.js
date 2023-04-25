@@ -77,9 +77,8 @@ class BoardWorkings {
 
     getPotentialWords () {
         let id = this.board[this.board.length - 1][this.board[this.board.length - 1].length - 1].id, board = [],
-            potentialWords, potentialHWords = [''], potentialVWords = [''], potentialScores = [], columnStart = 0, hPoints = 0, vPoints = 0,
-            hWordModifier = 1, vWordModifier = 1, hWordLocked = false, vWordLocked = false,
-            hLock = true, vLock = true
+            potentialHWords = [{ word: '', score: 0 }], potentialVWords = [{ word: '', score: 0 }], columnStart = 0, hWordModifier = 1, vWordModifier = 1,
+            hWordLocked = false, vWordLocked = false, hLock = true, vLock = true
         // append an additional invisible dummy tile to each row to prevent horizontal word wrapping
         this.board.forEach(row => board.push([...row.slice(), { id: id++, char: '', type: '', color: 'none', tileColor: 'none', fontColor: 'none',
             tileFontColor: 'none', tileInvalidFontColor: 'none', fontSize: 1, tileFontSize: 1, hide: 0, start: 0, locked: false, valid: false, points: 0 }]))
@@ -91,23 +90,24 @@ class BoardWorkings {
         for (const row of board) {
             for (const column of row) {
                 if (!column.char && (this.checkLeftTile(row, column) ? this.checkLeftTile(row, column).char : false)) {
-                    potentialHWords[potentialHWords.length - 1] += ', ' + hPoints * hWordModifier
-                    hPoints = 0 // reset the points for the next searched word
+                    potentialHWords[potentialHWords.length - 1].score *= hWordModifier
                     hWordModifier = 1 // reset the modifier for the next searched word
-                    if (hWordLocked) {
+                    if (hWordLocked || !potentialHWords[potentialHWords.length - 1].word) {
                         potentialHWords.pop() // remove the word if it is locked
                         hWordLocked = false
                     }
-                    potentialHWords.push('') // create a blank slate for a new potential word
+                    potentialHWords.push({ word: '', score: 0 }) // create a blank slate for a new potential word
                     hLock = true
                 }
                 else if (column.char && (!this.checkVerticalAdjacency(row, column, board) || this.checkHorizontalAdjacency(row, column))) {
-                    potentialHWords[potentialHWords.length - 1] += column.name // add the tile's letter to the potential word
-                    hPoints += column.points // add the tile's points to the potential score of the word
+                    potentialHWords[potentialHWords.length - 1].word += column.name // add the tile's letter to the potential word
+                    potentialHWords[potentialHWords.length - 1].score += column.points // add the tile's points to the potential score of the word
                     for (const type of boardData.tileTypes)
                         if (type.name === column.type && !column.locked) {
-                            if (type.affects === 'word') hWordModifier = type.modifier // set the tile's modifier to act as a modifier for the entire word
-                            else hPoints += column.points * (type.modifier - 1) // multiply the points of the tile by the tile's modifier
+                            // set the tile's modifier to act as a modifier for the entire word
+                            if (type.affects === 'word') hWordModifier = type.modifier
+                            // multiply the points of the tile by the tile's modifier
+                            else potentialHWords[potentialHWords.length - 1].score += column.points * (type.modifier - 1)
                         }
                     if (hLock) hLock = column.locked
                     hWordLocked = hLock // lock the word played by a previous player so that it does not count as a word played by the current player
@@ -115,14 +115,13 @@ class BoardWorkings {
                 for (const columnRow of board)
                     if (!columnRow[row.indexOf(column)].char && (board[board.indexOf(columnRow) - 1]
                             ? board[board.indexOf(columnRow) - 1][row.indexOf(column)].char : false)) {
-                        potentialVWords[potentialVWords.length - 1] += ', ' + vPoints * vWordModifier
-                        vPoints = 0 // reset the points for the next searched word
+                        potentialVWords[potentialVWords.length - 1].score *= vWordModifier
                         vWordModifier = 1 // reset the modifier for the next searched word
-                        if (vWordLocked) {
+                        if (vWordLocked || !potentialVWords[potentialVWords.length - 1].word) {
                             potentialVWords.pop() // remove the word if it is locked
                             vWordLocked = false
                         }
-                        potentialVWords.push('') // create a blank slate for a new potential word
+                        potentialVWords.push({ word: '', score: 0 }) // create a blank slate for a new potential word
                         vLock = true
                     }
                     else if (row.indexOf(column) >= columnStart && columnRow[row.indexOf(column)].char
@@ -130,14 +129,15 @@ class BoardWorkings {
                                 ? board[board.indexOf(columnRow) - 1][row.indexOf(column)].char : false)
                             || (board[board.indexOf(columnRow) + 1]
                                 ? board[board.indexOf(columnRow) + 1][row.indexOf(column)].char : false))) {
-                        potentialVWords[potentialVWords.length - 1] += columnRow[row.indexOf(column)].name // add the tile's letter to the potential word
-                        vPoints += columnRow[row.indexOf(column)].points // add the tile's points to the potential score of the word
+                        potentialVWords[potentialVWords.length - 1].word += columnRow[row.indexOf(column)].name // add the tile's letter to the potential word
+                        // add the tile's points to the potential score of the word
+                        potentialVWords[potentialVWords.length - 1].score += columnRow[row.indexOf(column)].points
                         for (const type of boardData.tileTypes)
                             if (type.name === columnRow[row.indexOf(column)].type && !columnRow[row.indexOf(column)].locked) {
                                 // set the tile's modifier to act as a modifier for the entire word
                                 if (type.affects === 'word') vWordModifier = type.modifier
                                 // multiply the points of the tile by the tile's modifier
-                                else vPoints += columnRow[row.indexOf(column)].points * (type.modifier - 1)
+                                else potentialVWords[potentialVWords.length - 1].score += columnRow[row.indexOf(column)].points * (type.modifier - 1)
                             }
                         if (vLock) vLock = columnRow[row.indexOf(column)].locked
                         vWordLocked = vLock // lock the word played by a previous player so that it does not count as a word played by the current player
@@ -145,16 +145,9 @@ class BoardWorkings {
                 columnStart++ // shift the starting column for searching to the right to prevent letters within each column from being read multiple times
             }
         }
-        potentialWords = potentialHWords.concat(potentialVWords)
-        potentialWords = potentialWords.sort().slice(0, potentialWords.indexOf(', 0'))
-            .concat(potentialWords.sort().slice(potentialWords.lastIndexOf(', 0') + 1, potentialWords.length))
-            .slice(potentialWords.lastIndexOf('') + 1, potentialWords.length)
-        potentialWords.forEach(potentialWord => potentialScores.push(Number(potentialWord.slice(potentialWord.indexOf(', ') + 1, potentialWord.length))))
-        potentialWords.forEach(potentialWord => potentialWords[potentialWords.indexOf(potentialWord)] = potentialWord.slice(0, potentialWord.indexOf(', ')))
-        return {
-            words: potentialWords,
-            scores: potentialScores
-        }
+        potentialHWords.splice(potentialHWords.indexOf(''), 1)
+        potentialVWords.splice(potentialVWords.indexOf(''), 1)
+        return potentialHWords.concat(potentialVWords)
     }
 }
 
