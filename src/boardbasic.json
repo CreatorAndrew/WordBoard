@@ -26,7 +26,7 @@
         {"id": "TL", "name": "TL", "modifier": "3", "affects": "letter", "color": "lime", "fontColor": "black", "fontSize": "75%", "hide": 0, "start": 0},
         {"id": "DL", "name": "DL", "modifier": "2", "affects": "letter", "color": "cyan", "fontColor": "black", "fontSize": "75%", "hide": 0, "start": 0},
         {"id": "--", "name": "--", "modifier": "1", "affects": "letter", "color": "white", "fontColor": "black", "fontSize": "75%", "hide": 1, "start": 0},
-        {"id": "ST", "name": "☆", "modifier": "2", "affects": "word", "color": "hotPink", "fontColor": "black", "fontSize": "150%", "hide": 0, "start": 1}
+        {"id": "ST", "name": "\u2606", "modifier": "2", "affects": "word", "color": "hotPink", "fontColor": "black", "fontSize": "150%", "hide": 0, "start": 1}
     ],
     "letters": [
         {"letter": " ", "value": 0, "count": 2, "wildCard": 1},
