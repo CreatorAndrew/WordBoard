@@ -24,10 +24,10 @@ class Board extends Component {
         return { inHand: false, handIndex: 0 }
     }
 
-    addTiles () {
-        while (this.state.players[this.nextPlayer].hand.length < 7) {
+    addTiles (player = this.state.players[this.nextPlayer]) {
+        while (player.hand.length < 7) {
             if (!this.state.board.letterBag.length) break
-            this.state.players[this.nextPlayer].hand.push(this.state.board.letterBag.pop())
+            player.hand.push(this.state.board.letterBag.pop())
         }
     }
 
@@ -219,10 +219,10 @@ class Board extends Component {
         return <div>
             {this.state.started ? '' : <button onClick={() => {
                 this.setState({ players: [...this.state.players, { name: 'Player ' + (this.state.players.length + 1), hand: [], score: 0,
-                    isActive: !this.state.players.length }] }, () => {
-                        this.addTiles()
-                        this.setState({ players: this.state.players.slice() })
-                    })}}>Add Player</button>}
+                        isActive: !this.state.players.length }] }, () => {
+                    this.addTiles(this.state.players[this.state.players.length - 1])
+                    this.setState({ players: this.state.players.slice() })
+                })}}>Add Player</button>}
             {this.state.finished ? <label>[ Game Finished ]</label> : <button onClick={() => this.endTurn(potentialWords)}>Next Player</button>}
             {!this.state.finished
                 && !this.placedTiles.length && this.state.board.letterBag.length ? <Exchange execute={text => this.exchange(potentialWords, text)}/> : ''}
