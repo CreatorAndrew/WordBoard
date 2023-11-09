@@ -200,7 +200,7 @@ class Board extends Component {
                 this.makeTileInvalid(tile, checkForInvalidTiles)
         }
         if (tile.points && !tile.char) tile.points = 0
-        if ((tileHorizontallyAdjacent || tileVerticallyAdjacent || tile.start) && checkForValidTiles) this.makeTileValid(tile, char)
+        if ((tileHorizontallyAdjacent || tileVerticallyAdjacent || tile.start) && checkForValidTiles) this.makeTileValid(tile, tile.char)
         else if (char && this.invalidTiles.indexOf(tile) < 0) this.makeTileInvalid(tile, checkForInvalidTiles)
         if (checkForInvalidTiles) {
             this.sortTiles(this.placedTiles)
